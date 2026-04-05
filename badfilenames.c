@@ -1,3 +1,5 @@
+#include <ctype.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -29,21 +31,132 @@ FILE *universal_fopen(const char *utf8_filename, const char *mode) {
 #endif
 }
 
-int main() {
-  // Filename with Unicode characters: "Greeting_你好_नमस्ते.txt"
-  const char *filename = "Greeting_\xe4\xbd\xa0\xe5\xa5\xbd_"
-                         "\xe0\xa4\xa8\xe0\xa4\xae\xe0\xa4\xb8\xe0\xa5\x8d\xe0"
-                         "\xa4\xa4\xe0\xa5\x87.txt";
-
-  FILE *f = universal_fopen(filename, "w");
-
-  if (f) {
-    fprintf(f, "File created successfully with a Unicode filename!\n");
-    fclose(f);
-    printf("Created file: %s\n", filename);
-  } else {
-    perror("Error creating file");
+/**
+ * Encodes a Unicode code point into a UTF-8 byte sequence.
+ * @param out: Pointer to a buffer of at least 5 bytes (4 for data + 1 for null
+ * terminator).
+ * @param cp: The Unicode code point (e.g., 0x20AC for the Euro sign).
+ * @return: The number of bytes written (excluding null terminator), or 0 on
+ * error.
+ */
+size_t utf8_from_codepoint(char *out, uint32_t cp) {
+  if (cp <= 0x7F) {
+    out[0] = (unsigned char)cp;
+    out[1] = '\0';
+    return 1;
+  } else if (cp <= 0x7FF) {
+    out[0] = (unsigned char)((cp >> 6) | 0xC0);
+    out[1] = (unsigned char)((cp & 0x3F) | 0x80);
+    out[2] = '\0';
+    return 2;
+  } else if (cp <= 0xFFFF) {
+    out[0] = (unsigned char)((cp >> 12) | 0xE0);
+    out[1] = (unsigned char)(((cp >> 6) & 0x3F) | 0x80);
+    out[2] = (unsigned char)((cp & 0x3F) | 0x80);
+    out[3] = '\0';
+    return 3;
+  } else if (cp <= 0x10FFFF) {
+    out[0] = (unsigned char)((cp >> 18) | 0xF0);
+    out[1] = (unsigned char)(((cp >> 12) & 0x3F) | 0x80);
+    out[2] = (unsigned char)(((cp >> 6) & 0x3F) | 0x80);
+    out[3] = (unsigned char)((cp & 0x3F) | 0x80);
+    out[4] = '\0';
+    return 4;
   }
+  return 0; // Invalid code point
+}
 
+void fprintescapedstring(FILE *f, char *s) {
+  for (size_t i = 0; s[i]; i++) {
+    if (isprint(s[i])) {
+      switch (s[i]) {
+      case '\'':
+        fprintf(f, "\\'");
+        break;
+      case '\"':
+        fprintf(f, "\\\"");
+        break;
+      case '\?':
+        fprintf(f, "\\?");
+        break;
+      case '\\':
+        fprintf(f, "\\\\");
+        break;
+      case '\a':
+        fprintf(f, "\\a");
+        break;
+      case '\b':
+        fprintf(f, "\\b");
+        break;
+      case '\f':
+        fprintf(f, "\\f");
+        break;
+      case '\n':
+        fprintf(f, "\\n");
+        break;
+      case '\r':
+        fprintf(f, "\\r");
+        break;
+      case '\t':
+        fprintf(f, "\\t");
+        break;
+      case '\v':
+        fprintf(f, "\\v");
+        break;
+      default:
+        fprintf(f, "%c", s[i]);
+        break;
+      }
+    } else {
+      fprintf(f, "\\x%02" PRIx8, s[i]);
+    }
+  }
+}
+
+#define CHECK_COUNT 3
+#define FILENAME_COUNT (CHECK_COUNT + 4 + CHECK_COUNT)
+
+int main() {
+  char check[CHECK_COUNT + 1];
+  char filename[FILENAME_COUNT + 1];
+
+  for (size_t i = 0; i < CHECK_COUNT; i++) {
+    check[i] = 'a' + (char)i;
+  }
+  check[CHECK_COUNT] = '\0';
+
+  for (uint32_t u = 0x01; u < 0x02FF; u++) {
+    char u_as_utf8[5];
+
+    size_t utf8_count = utf8_from_codepoint(u_as_utf8, u);
+    if (utf8_count < 1) {
+      fprintf(stderr, "Error creating UTF8 for codepoint: 0x%" PRIx32 "\n", u);
+    }
+
+    size_t i = 0;
+    for (size_t j = 0; j < CHECK_COUNT && i <= FILENAME_COUNT; j++) {
+      filename[i++] = check[j];
+    }
+    for (size_t j = 0; j < utf8_count && i <= FILENAME_COUNT; j++) {
+      filename[i++] = u_as_utf8[j];
+    }
+    for (size_t j = 0; j < CHECK_COUNT && i <= FILENAME_COUNT; j++) {
+      filename[i++] = check[j];
+    }
+    filename[i] = '\0';
+
+    FILE *f = universal_fopen(filename, "w");
+
+    if (f) {
+      fprintf(f, "%s\n", filename);
+      fclose(f);
+      printf("Created");
+    } else {
+      printf("Error creating");
+    }
+    printf(" file [0x%04" PRIx32 "]: \"", u);
+    fprintescapedstring(stdout, filename);
+    printf("\"\n");
+  }
   return 0;
 }

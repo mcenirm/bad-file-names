@@ -23,21 +23,11 @@ jobs:
       - name: Run (Windows)
         if: runner.os == 'Windows'
         run: |
-          mkdir ${{github.workspace}}\test
-          cd ${{github.workspace}}\test
+          cd ${{runner.temp}}
           & ${{github.workspace}}\build\Debug\badfilenames.exe
 
       - name: Run (not Windows)
         if: runner.os != 'Windows'
         run: |
-          mkdir ${{github.workspace}}/test
-          cd ${{github.workspace}}/test
+          cd ${{runner.temp}}
           ${{github.workspace}}/build/badfilenames
-
-      - name: Show everything (Windows)
-        if: runner.os == 'Windows'
-        run: Get-ChildItem -Force -Recurse ${{github.workspace}}/test
-
-      - name: Show everything (not Windows)
-        if: runner.os != 'Windows'
-        run: ls -alR ${{github.workspace}}/test
