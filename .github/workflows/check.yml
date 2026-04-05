@@ -21,12 +21,12 @@ jobs:
         run: cmake --build ${{github.workspace}}/build
 
       - name: Run
-        run: mkdir ${{github.workspace}}/test && cd ${{github.workspace}}/test && ${{github.workspace}}/build/badfilenames
+        run: ctest
 
       - name: Show everything (Windows)
         if: runner.os == 'Windows'
-        run: Get-ChildItem -Force -Recurse ${{github.workspace}}/test
+        run: Get-ChildItem -Force -Recurse
 
       - name: Show everything (not Windows)
         if: runner.os != 'Windows'
-        run: ls -alR ${{github.workspace}}/test
+        run: ls -alR
