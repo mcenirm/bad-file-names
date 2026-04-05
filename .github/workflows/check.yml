@@ -20,13 +20,24 @@ jobs:
       - name: Build
         run: cmake --build ${{github.workspace}}/build
 
-      - name: Run
-        run: ctest
+      - name: Run (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          mkdir ${{github.workspace}}\test
+          cd ${{github.workspace}}\test
+          & ${{github.workspace}}\build\badfilenames.exe
+
+      - name: Run (not Windows)
+        if: runner.os != 'Windows'
+        run: |
+          mkdir ${{github.workspace}}/test
+          cd ${{github.workspace}}/test
+          ${{github.workspace}}/build/badfilenames
 
       - name: Show everything (Windows)
         if: runner.os == 'Windows'
-        run: Get-ChildItem -Force -Recurse
+        run: Get-ChildItem -Force -Recurse ${{github.workspace}}/test
 
       - name: Show everything (not Windows)
         if: runner.os != 'Windows'
-        run: ls -alR
+        run: ls -alR ${{github.workspace}}/test
