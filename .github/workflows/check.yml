@@ -24,10 +24,10 @@ jobs:
         if: runner.os == 'Windows'
         run: |
           cd ${{runner.temp}}
-          & ${{github.workspace}}\build\Debug\badfilenames.exe
+          & ${{github.workspace}}\build\Debug\badfilenames.exe | Out-Null
 
       - name: Run (not Windows)
         if: runner.os != 'Windows'
         run: |
           cd ${{runner.temp}}
-          ${{github.workspace}}/build/badfilenames
+          ${{github.workspace}}/build/badfilenames > /dev/null

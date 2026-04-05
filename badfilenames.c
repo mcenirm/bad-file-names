@@ -130,7 +130,8 @@ int main() {
 
     size_t utf8_count = utf8_from_codepoint(u_as_utf8, u);
     if (utf8_count < 1) {
-      fprintf(stderr, "Error creating UTF8 for codepoint: 0x%" PRIx32 "\n", u);
+      fprintf(stderr, "Error creating UTF8 for codepoint: 0x%04" PRIX32 "\n",
+              u);
     }
 
     size_t i = 0;
@@ -146,17 +147,19 @@ int main() {
     filename[i] = '\0';
 
     FILE *f = universal_fopen(filename, "w");
+    FILE *status = stdout;
 
     if (f) {
       fprintf(f, "%s\n", filename);
       fclose(f);
-      printf("Created");
+      fprintf(status, "Created");
     } else {
-      printf("Error creating");
+      status = stderr;
+      fprintf(status, "Error creating");
     }
-    printf(" file [0x%04" PRIx32 "]: \"", u);
-    fprintescapedstring(stdout, filename);
-    printf("\"\n");
+    fprintf(status, " file [0x%04" PRIX32 "]: \"", u);
+    fprintescapedstring(status, filename);
+    fprintf(status, "\"  %s\n", filename);
   }
   return 0;
 }
